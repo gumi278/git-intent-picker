@@ -59,21 +59,33 @@ In your `.py` files inside the working tree (uncommitted state), write comments 
 ### 1.1 Common Pitfalls
 
 * **A marker comment block ends when the line comments break.**
+
   The parser cannot handle empty lines in between or multi-line string formats (like docstrings using `"""`). It mechanically recognizes contiguous line comments (`#`) as a single block.
 
+
 * **Execution directory matters.**
+
   The tool uses the local Git repository's `diff` to scan files that differ from HEAD. Therefore, **you must execute the command inside the target Git repository**. It fetches GitHub Issue access configurations from Git-related settings (`git` and `gh`).
 
+
 * **It only reacts to uncommitted changes.**
+
   Because it triggers based on `git diff`, **if you commit the changes and there is no diff against HEAD, writing marker comments will yield no reaction**.
 
+
 * **It currently only works with Python code.**
+
   To avoid complexity in handling marker comments across multiple languages, the parser is currently limited to Python (`.py`) files. Multi-language support may be added in the future.
 
+
 * **Committing with marker comments complicates the workflow.**
+
   This tool extracts marker comments from "uncommitted diffs." If you commit the marker comments before running `gip`, they will no longer be recognized as diffs and cannot be extracted.
+
   If you decide you want to create an Issue *after* committing, you will have to undergo a tedious process: "remove the marker comments and re-commit (to finalize the pure code hash)" ➔ "re-add the marker comments and run `gip` again." This creates unnecessary friction and misaligns the hash recorded in the Issue with the actual commit hash.
+
   *Note: If you leave them in the history without turning them into Issues, an AI agent might see the comments the next time it edits the code, but this rarely leads to fatal problems. (If you just want to leave a memo and don't need an Issue, committing them as-is is perfectly fine).*
+
 
 ### 2. Running the Command
 
@@ -94,26 +106,34 @@ gip --author "alice"
 Here is the ideal transaction flow for separating code and intent using `git-intent-picker`:
 
 1. **Commit the AI's Code (Confirm HEAD)**
+
    Commit the pure, completed code to confirm the hash. (e.g., `git commit -m "feat: implement logic"`)
 
 2. **Describe Intent (Uncommitted)**
+
    In your IDE, write your intent (marker comments) using `# @Name:` in the target `.py` file. *(Do not commit at this point. It is perfectly fine to modify other documents like Markdown files concurrently).*
 
+
 3. **Extract and Publish**
+
    Run `gip`. The marker comment blocks are extracted, and GitHub Issues are created along with the current HEAD hash.
 
+
 4. **Visually Rollback in IDE**
+
    After execution, return to your IDE (like IntelliJ) as instructed in the terminal. Use the "Rollback" feature directly in the editor to safely erase only the diffs of the no-longer-needed marker comments.
+
    *(Alternatively, if you proceed to the next AI editing task, the AI agent might read the context and remove them for you).*
 
+
 5. **Commit & Push the Remaining Work**
+
    Commit any remaining modifications, such as documents (`.md`), as a separate commit, and `git push` to the remote at your convenience.
+
 
 ## ⚙️️ Limitations
 
 * In the current version, extraction is strictly limited to `.py` files.
-
----
 
 ## License
 
