@@ -137,9 +137,15 @@ def main():
         file_permalink = f"{repo_url}/blob/{commit_hash}/{filepath}#L{block['line']}"
         
         # Issue本文の構成
-        issue_body_lines = ["```python"]
-        issue_body_lines.extend(block['content'])
-        issue_body_lines.append("```\n")
+        issue_body_lines = []
+        
+        # 1行目はスキップし、2行目以降のコメント記号とインデントを取り除く
+        for line in block['content'][1:]:
+            # 行頭の空白と '#' を取り除き、さらにその直後の空白を取り除く
+            clean_line = line.lstrip(" \t#").lstrip(" \t")
+            issue_body_lines.append(clean_line)
+            
+        issue_body_lines.append("") # 空行を挿入
         issue_body_lines.append(f"🔗 [{filepath} (Line {block['line']})]({file_permalink})")
         
         issue_body = "\n".join(issue_body_lines)
