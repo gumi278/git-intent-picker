@@ -30,13 +30,29 @@ AI駆動開発（AIエージェントによる自動実装など）において�
 
 ## 🚀 インストール
 
-ソースコードは `src/gip/main.py` に配置されています。
-ターミナルで `gip` として実行できるよう、エイリアスを設定することをおすすめします。
+MacやLinux環境では、HomebrewのカスタムTapを利用したインストールを推奨しています。
+必要な依存関係（`gh`, `python3`）も自動的に解決されます。
 
 ```bash
-# ~/.zshrc や ~/.bashrc に以下を追記
-alias gip='python3 /絶対パス/src/gip/main.py'
+brew install gumi278/tap/gip
+
 ```
+
+インストール完了後、ターミナルで `gip` コマンドがどこからでも使えるようになります（※事前に `gh auth login` による認証が必要です）。
+
+### 最新版の取得（手動インストール）
+
+常に最新のソースコードを使用したい場合や、Homebrew環境がない場合は、リポジトリをローカルにクローンして使用してください。
+プログラムのエントリーポイントは `src/gip/main.py` です。
+
+```bash
+git clone https://github.com/gumi278/git-intent-picker.git
+
+# 実行例
+# python3 git-intent-picker/src/gip/main.py
+
+```
+
 
 ## 💻 使い方
 

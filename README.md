@@ -30,12 +30,27 @@ This tool depends on the following commands and configurations:
 
 ## 🚀 Installation
 
-The source code is located at `src/gip/main.py`.
-We recommend setting up an alias so you can run it globally via the `gip` command.
+For Mac and Linux environments, we recommend installing via our custom Homebrew Tap.
+All necessary dependencies (`gh` and `python3`) will be resolved automatically.
 
 ```bash
-# Add this to your ~/.zshrc or ~/.bashrc
-alias gip='python3 /absolute/path/to/src/gip/main.py'
+brew install gumi278/tap/gip
+
+```
+
+Once installed, the `gip` command will be available globally in your terminal (*Note: You must authenticate with `gh auth login` beforehand*).
+
+### Getting the Latest Version (Running from Source)
+
+If you prefer to use the latest bleeding-edge source code or do not use Homebrew, you can clone the repository and run it locally.
+The entry point for the program is `src/gip/main.py`.
+
+```bash
+git clone https://github.com/gumi278/git-intent-picker.git
+
+# Example usage
+# python3 git-intent-picker/src/gip/main.py
+
 ```
 
 ## 💻 Usage
