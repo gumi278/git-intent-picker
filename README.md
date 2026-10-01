@@ -12,16 +12,21 @@ Currently, this tool extracts marker comments written in Python code and semi-au
 
 * **Safe Read-Only Design**: No destructive operations like auto-deleting or restoring (`git restore`). After extraction, you can safely and visually clean up the comments using your IDE's Rollback feature.
 * **1 Intent = 1 Issue**: Automatically creates an independent GitHub Issue for each extracted marker comment block.
-* **Auto-Link HEAD Commit**: Fetches the current HEAD hash (the latest confirmed commit) and embeds it as a permalink within the Issue body.
+* **Clean Text Output**: The created Issues are stripped of Python comment symbols (`#`) and unnecessary indentations, rendering as clean plain text.
+* **Auto-Link HEAD Commit**: Fetches the current HEAD hash (the latest confirmed commit) and embeds it as a permalink to the target file within the Issue body (intentionally omitting line numbers to prevent confusion, as the comments will be rolled back).
 * **Auto-Generated Titles**: Automatically generates the Issue title by stripping the prefix from the first line of the marker comment.
+
+![Source code](screenshot01a.png)
+![Issues](screenshot02a.png)
 
 ## 📦 Prerequisites
 
-This tool depends on the following:
+This tool depends on the following commands and configurations:
 
 * Python 3.x
 * Git
 * GitHub CLI (`gh`) *Note: Please authenticate in advance using `gh auth login`.*
+* **[CRITICAL] GitHub Repository Setup**: This tool automatically applies a label named `gip` to the created Issues. **You must manually create the `gip` label in your GitHub repository beforehand.** (The process will fail with an error if the label does not exist).
 
 ## 🚀 Installation
 
@@ -104,7 +109,7 @@ Here is the ideal transaction flow for separating code and intent using `git-int
 5. **Commit & Push the Remaining Work**
    Commit any remaining modifications, such as documents (`.md`), as a separate commit, and `git push` to the remote at your convenience.
 
-## ⚙️ Limitations
+## ⚙️️ Limitations
 
 * In the current version, extraction is strictly limited to `.py` files.
 
@@ -113,3 +118,4 @@ Here is the ideal transaction flow for separating code and intent using `git-int
 ## License
 
 This project is licensed under the [MIT License](./LICENSE).
+
