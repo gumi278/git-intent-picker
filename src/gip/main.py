@@ -93,7 +93,6 @@ def main():
             print("❌ エラー: --author が指定されておらず、git の user.name も設定されていません。")
             print("💡 解決策: 'gip --author <名前>' で直接指定するか、'git config user.name <名前>' を設定してください。")
             sys.exit(1)
-        print(f"👤 --author が省略されたため、git config の設定 '{author_name}' を使用します。")
 
     git_root = get_git_root()
     changed_files = get_changed_files()
@@ -138,15 +137,10 @@ def main():
         file_permalink = f"{repo_url}/blob/{commit_hash}/{filepath}#L{block['line']}"
         
         # Issue本文の構成
-        issue_body_lines = [
-            f"### 📄 `{filepath}`",
-            f"🔗 **Permalink**: [{filepath} (Line {block['line']})]({file_permalink})",
-            "",
-            "```python"
-        ]
+        issue_body_lines = ["```python"]
         issue_body_lines.extend(block['content'])
         issue_body_lines.append("```\n")
-        issue_body_lines.append(f"📌 **Target Commit**: `{commit_hash}`")
+        issue_body_lines.append(f"🔗 [{filepath} (Line {block['line']})]({file_permalink})")
         
         issue_body = "\n".join(issue_body_lines)
         
