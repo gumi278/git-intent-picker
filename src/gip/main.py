@@ -144,7 +144,10 @@ def main():
             clean_line = line.lstrip(" \t#").lstrip(" \t")
             issue_body_lines.append(clean_line)
             
-        issue_body_lines.append("") # 空行を挿入
+        issue_body_lines.append("")
+        issue_body_lines.append("---")
+        issue_body_lines.append("")
+        
         # リンクのテキストからも行番号指定を外す
         issue_body_lines.append(f"🔗 [{filepath}]({file_permalink})")
         
