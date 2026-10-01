@@ -133,25 +133,31 @@ def main():
         
         issue_title = generate_issue_title(block["content"], author_name, filepath)
         
-        # ハッシュ指定のパーマリンクURLを構築（末尾に行番号を指定してハイライト）
-        file_permalink = f"{repo_url}/blob/{commit_hash}/{filepath}#L{block['line']}"
+        # ハッシュ指定のパーマリンクURLを構築（行番号指定は誤解を招くため除外）
+        file_permalink = f"{repo_url}/blob/{commit_hash}/{filepath}"
         
         # Issue本文の構成
         issue_body_lines = []
         
         # 1行目はスキップし、2行目以降のコメント記号とインデントを取り除く
         for line in block['content'][1:]:
-            # 行頭の空白と '#' を取り除き、さらにその直後の空白を取り除く
             clean_line = line.lstrip(" \t#").lstrip(" \t")
             issue_body_lines.append(clean_line)
             
         issue_body_lines.append("") # 空行を挿入
-        issue_body_lines.append(f"🔗 [{filepath} (Line {block['line']})]({file_permalink})")
+        # リンクのテキストからも行番号指定を外す
+        issue_body_lines.append(f"🔗 [{filepath}]({file_permalink})")
         
         issue_body = "\n".join(issue_body_lines)
         
         print(f"🚀 [{i}/{total_blocks}] Issueを起票中: {issue_title}")
-        issue_url = run_cmd(["gh", "issue", "create", "--title", issue_title, "--body", issue_body])
+        # --label "gip" を追加してIssueを作成
+        issue_url = run_cmd([
+            "gh", "issue", "create",
+            "--title", issue_title,
+            "--body", issue_body,
+            "--label", "gip"
+        ])
         created_issue_urls.append(issue_url)
 
     # 破壊的変更（git restore）を排除し、IDEでの手動Rollbackを促すメッセージへ変更
