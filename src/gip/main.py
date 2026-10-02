@@ -83,11 +83,13 @@ def extract_intent_blocks(filepath: str, author: str) -> list[dict]:
             if line_clean.startswith("#"):
                 current_block.append(line_clean)
             else:
-                blocks.append({"line": start_line, "content": current_block})
+                end_line = start_line + len(current_block) - 1
+                blocks.append({"line": start_line, "end_line": end_line, "content": current_block})
                 in_block = False
                 
     if in_block:
-        blocks.append({"line": start_line, "content": current_block})
+        end_line = start_line + len(current_block) - 1
+        blocks.append({"line": start_line, "end_line": end_line, "content": current_block})
         
     return blocks
 
@@ -133,12 +135,19 @@ def main():
         if not os.path.isfile(filepath_abs):
             continue
             
+        changed_lines = get_changed_line_numbers_from_diff(filepath_relative)
+        
         blocks = extract_intent_blocks(filepath_abs, author_name)
         for b in blocks:
-            extracted_blocks_flat.append({
-                "filepath": filepath_relative,
-                "block": b
-            })
+            start_line = b["line"]
+            end_line = b["end_line"]
+            block_lines = set(range(start_line, end_line + 1))
+            
+            if block_lines.intersection(changed_lines):
+                extracted_blocks_flat.append({
+                    "filepath": filepath_relative,
+                    "block": b
+                })
 
     if not extracted_blocks_flat:
         print(f"対象ファイル内に '# @{author_name}' で始まる意図コメントは見つかりませんでした。")
