@@ -29,9 +29,17 @@ def get_git_user_name() -> str:
     result = subprocess.run(["git", "config", "user.name"], capture_output=True, text=True)
     return result.stdout.strip()
 
-def get_github_repo_url() -> str:
+def get_git_remote_url(remote_name: str) -> str:
+    """指定されたリモート名からURLを取得する"""
+    result = subprocess.run(["git", "remote", "get-url", remote_name], capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"指定されたリモート '{remote_name}' は存在しません。環境変数 GIP_ISSUE_REMOTE の設定を確認してください。")
+        sys.exit(1)
+    return result.stdout.strip()
+
+def get_github_repo_url(target_repo_url: str) -> str:
     """ghコマンドを使用してGitHubのリポジトリベースURLを取得する"""
-    return run_cmd(["gh", "repo", "view", "--json", "url", "-q", ".url"])
+    return run_cmd(["gh", "repo", "view", "--repo", target_repo_url, "--json", "url", "-q", ".url"])
 
 def extract_intent_blocks(filepath: str, author: str) -> list[dict]:
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -123,9 +131,19 @@ def main():
     total_blocks = len(extracted_blocks_flat)
     print(f"🔍 {total_blocks}件の意図コメントブロックを抽出しました。\n")
 
+    # 環境変数から起票先リモート名を取得（デフォルト: origin）
+    issue_remote_name = os.environ.get("GIP_ISSUE_REMOTE") or "origin"
+
     # GitHubパーマリンク生成のための情報を取得
     commit_hash = get_current_commit_hash()
-    repo_url = get_github_repo_url()
+    
+    # 1. パーマリンク用URL（コードの実体がある場所 = 常に origin）
+    origin_remote_url = get_git_remote_url("origin")
+    permalink_repo_url = get_github_repo_url(origin_remote_url)
+    
+    # 2. Issue起票先URL（環境変数で指定されたリモート）
+    issue_target_remote_url = get_git_remote_url(issue_remote_name)
+    
     created_issue_urls = []
 
     for i, data in enumerate(extracted_blocks_flat, 1):
@@ -135,7 +153,7 @@ def main():
         issue_title = generate_issue_title(block["content"], author_name, filepath)
         
         # ハッシュ指定のパーマリンクURLを構築（行番号指定は誤解を招くため除外）
-        file_permalink = f"{repo_url}/blob/{commit_hash}/{filepath}"
+        file_permalink = f"{permalink_repo_url}/blob/{commit_hash}/{filepath}"
         
         # Issue本文の構成
         issue_body_lines = []
@@ -158,6 +176,7 @@ def main():
         # --label "gip" を追加してIssueを作成
         issue_url = run_cmd([
             "gh", "issue", "create",
+            "--repo", issue_target_remote_url,
             "--title", issue_title,
             "--body", issue_body,
             "--label", "gip"
