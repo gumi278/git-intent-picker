@@ -3,6 +3,7 @@ import argparse
 import subprocess
 import os
 import sys
+import re
 
 def run_cmd(cmd: list[str], check: bool = True) -> str:
     """シェルコマンドを実行し、標準出力を返す"""
@@ -20,8 +21,23 @@ def get_current_commit_hash() -> str:
     return run_cmd(["git", "rev-parse", "HEAD"])
 
 def get_changed_files() -> list[str]:
-    output = run_cmd(["git", "diff", "HEAD", "--name-only"])
+    output = run_cmd(["git", "show", "--name-only", "--format=", "HEAD"])
     return [f for f in output.splitlines() if f.strip()]
+
+def get_changed_line_numbers_from_diff(filepath: str) -> set[int]:
+    diff_output = run_cmd(["git", "show", "-U0", "--format=", "HEAD", "--", filepath], check=False)
+    changed_lines = set()
+    for line in diff_output.splitlines():
+        if line.startswith("@@"):
+            m = re.search(r'\+([0-9]+)(?:,([0-9]+))?', line)
+            if m:
+                start = int(m.group(1))
+                count = int(m.group(2)) if m.group(2) is not None else 1
+                if count == 0:
+                    continue
+                for i in range(start, start + count):
+                    changed_lines.add(i)
+    return changed_lines
 
 def get_git_user_name() -> str:
     """Gitのグローバルまたはローカル設定から user.name を取得する"""
@@ -152,8 +168,10 @@ def main():
         
         issue_title = generate_issue_title(block["content"], author_name, filepath)
         
-        # ハッシュ指定のパーマリンクURLを構築（行番号指定は誤解を招くため除外）
-        file_permalink = f"{permalink_repo_url}/blob/{commit_hash}/{filepath}"
+        start_line = block.get("line")
+        end_line = block.get("end_line", start_line)
+        line_anchor = f"#L{start_line}" if start_line == end_line else f"#L{start_line}-L{end_line}"
+        file_permalink = f"{permalink_repo_url}/blob/{commit_hash}/{filepath}{line_anchor}"
         
         # Issue本文の構成
         issue_body_lines = []
