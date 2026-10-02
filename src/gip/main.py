@@ -107,8 +107,16 @@ def generate_issue_title(block_content: list[str], author: str, filepath: str) -
     return title
 
 def main():
-    parser = argparse.ArgumentParser(prog="gip", description="マーカーコメント処理プロセッサ")
-    # required=True を外し、任意のオプションに変更
+    parser = argparse.ArgumentParser(
+        prog="gip",
+        description="マーカーコメント処理プロセッサ",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+環境変数:
+  GIP_ISSUE_REMOTE    Issueの起票先リモート名 (デフォルト: origin)
+                      例: export GIP_ISSUE_REMOTE=upstream
+"""
+    )
     parser.add_argument("--author", type=str, help="対象名 (例: myname)。省略時は git config user.name を使用します。")
     args = parser.parse_args()
 
