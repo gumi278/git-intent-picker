@@ -8,6 +8,9 @@ In modern AI-driven development (e.g., using AI agents for automated coding), th
 
 Currently, it extracts marker comments written in Python and semi-automatically converts them into GitHub Issues.
 
+![Source Code](ss01en.png)
+![Issues](ss02en.png)
+
 ## ✨ Features
 
 * **Safe & Read-Only**: Makes zero destructive changes (no automatic `git restore` or file deletion). You maintain full control over when to commit the cleanup.
@@ -15,9 +18,6 @@ Currently, it extracts marker comments written in Python and semi-automatically 
 * **Clean Text Output**: Strips Python comment symbols (`#`) and unnecessary indentation, recording the Issue in clean, plain text via the `gh` CLI.
 * **Perfect HEAD Commit Linking**: Analyzes the latest commit (HEAD) to stamp a permanent, line-accurate link (e.g., `#L12-L15`) directly in the Issue body.
 * **Smart Title Generation**: Automatically generates the Issue title by parsing the first line of your marker comment.
-
-![Source Code](ss01en.png)
-![Issues](ss02en.png)
 
 ## 📦 Prerequisites
 
