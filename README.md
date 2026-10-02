@@ -16,8 +16,8 @@ Currently, it extracts marker comments written in Python and semi-automatically 
 * **Perfect HEAD Commit Linking**: Analyzes the latest commit (HEAD) to stamp a permanent, line-accurate link (e.g., `#L12-L15`) directly in the Issue body.
 * **Smart Title Generation**: Automatically generates the Issue title by parsing the first line of your marker comment.
 
-![Source Code](screenshot01a.png)
-![Issues](screenshot02a.png)
+![Source Code](ss01en.png)
+![Issues](ss02en.png)
 
 ## 📦 Prerequisites
 
@@ -105,6 +105,18 @@ To extract comments for a different author name, use the `--author` flag:
 ```bash
 gip --author "alice"
 ```
+
+### 3. Routing Issues to a Specific Remote
+
+If you are working on a fork (`origin`) but want to file Issues upstream, you can route the destination by setting the `GIP_ISSUE_REMOTE` environment variable.
+
+```bash
+export GIP_ISSUE_REMOTE=upstream
+```
+
+* **Default behavior:** If left undefined or empty, it defaults to `origin`.
+* **Cross-repo safe:** Code permalinks are strictly generated using the `origin` URL (where your code physically lives), guaranteeing that links won't break even when issues are filed in a different repository.
+* **Best practice:** We highly recommend using tools like `direnv` to declare this per-project inside an `.envrc` file.
 
 ## 🔄 The Ideal Workflow
 

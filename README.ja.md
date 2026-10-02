@@ -27,8 +27,8 @@ AI駆動開発（AIエージェントによる自動実装など）において�
 * **HEADコミットの完璧な紐付け**: 直近のコミット（HEAD）のハッシュと変更行を解析し、Issue本文に対象ファイルと**該当する行番号**（例: `#L12-L15`）のパーマリンクとして自動的に刻印します。
 * **タイトルの自動生成**: マーカーコメントの1行目からプレフィックスを取り除き、自動的にIssueのタイトルを生成します。
 
-![ソースコード](screenshot01.png)
-![Issues](screenshot02.png)
+![ソースコード](ss01ja.png)
+![Issues](ss02ja.png)
 
 ## 📦 前提条件
 
@@ -46,7 +46,6 @@ MacやLinux環境では、HomebrewのカスタムTapを利用したインスト�
 
 ```bash
 brew install gumi278/tap/gip
-
 ```
 
 インストール完了後、ターミナルで `gip` コマンドがどこからでも使えるようになります（※事前に `gh auth login` による認証が必要です）。
@@ -61,7 +60,6 @@ git clone https://github.com/gumi278/git-intent-picker.git
 
 # 実行例
 # python3 git-intent-picker/src/gip/main.py
-
 ```
 
 ## 💻 使い方
@@ -80,7 +78,6 @@ git clone https://github.com/gumi278/git-intent-picker.git
         # ここでは外部APIを直接叩かず、DIを用いて
         # テスト容易性を担保する設計にしました。
         pass
-
 ```
 
 ### 1.1 勘違いしやすいポイント
@@ -117,15 +114,25 @@ git clone https://github.com/gumi278/git-intent-picker.git
 
 ```bash
 gip
-
 ```
 
 もしGitの設定とは異なる名前で抽出したい場合は、`--author` オプションで明示的に指定することも可能です。
 
 ```bash
 gip --author "taro"
-
 ```
+
+### 3. 起票先リポジトリの制御（環境変数）
+
+フォークしたリポジトリ（`origin`）で作業しつつ、Issueの起票先は本家（`upstream`）にしたい場合など、環境変数 `GIP_ISSUE_REMOTE` を設定することでIssueの送信先リモートを制御できます。
+
+```bash
+export GIP_ISSUE_REMOTE=upstream
+```
+
+* 未定義、または空文字の場合はデフォルトで `origin` が使用されます。
+* パーマリンク（コードへのリンク）は常にコードの実体がある `origin` をベースに生成されるため、リポジトリを横断して起票してもリンク切れにはなりません。
+* `direnv` などを利用して、プロジェクト（ディレクトリ）ごとに `.envrc` へ環境変数を記述しておく運用を想定しています。
 
 ## 🔄 理想的なワークフロー
 
