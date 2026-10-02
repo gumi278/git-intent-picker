@@ -55,7 +55,7 @@ def get_git_remote_url(remote_name: str) -> str:
 
 def get_github_repo_url(target_repo_url: str) -> str:
     """ghコマンドを使用してGitHubのリポジトリベースURLを取得する"""
-    return run_cmd(["gh", "repo", "view", "--repo", target_repo_url, "--json", "url", "-q", ".url"])
+    return run_cmd(["gh", "repo", "view", target_repo_url, "--json", "url", "-q", ".url"])
 
 def extract_intent_blocks(filepath: str, author: str) -> list[dict]:
     with open(filepath, 'r', encoding='utf-8') as f:
