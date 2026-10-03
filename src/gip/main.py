@@ -24,6 +24,10 @@ def get_changed_files() -> list[str]:
     output = run_cmd(["git", "show", "--name-only", "--format=", "HEAD"])
     return [f for f in output.splitlines() if f.strip()]
 
+def get_current_branch() -> str:
+    branch = run_cmd(["git", "branch", "--show-current"], check=False)
+    return branch if branch else "detached HEAD"
+
 def get_changed_line_numbers_from_diff(filepath: str) -> set[int]:
     diff_output = run_cmd(["git", "show", "-U0", "--format=", "HEAD", "--", filepath], check=False)
     changed_lines = set()
@@ -177,6 +181,7 @@ def main():
     # 2. Issue起票先URL（環境変数で指定されたリモート）
     issue_target_remote_url = get_git_remote_url(issue_remote_name)
     
+    current_branch = get_current_branch()
     created_issue_urls = []
 
     for i, data in enumerate(extracted_blocks_flat, 1):
@@ -201,6 +206,9 @@ def main():
         issue_body_lines.append("")
         issue_body_lines.append("---")
         issue_body_lines.append("")
+        
+        # 追加: ブランチ名の挿入
+        issue_body_lines.append(f"🌿 **Branch:** `{current_branch}`")
         
         # リンクのテキストからも行番号指定を外す
         issue_body_lines.append(f"🔗 [{filepath}]({file_permalink})")
