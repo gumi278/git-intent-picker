@@ -17,9 +17,9 @@ AI駆動開発（AIエージェントによる自動実装など）において�
 >
 > AIエージェントの領域を認め、確率論支配の排除ではなく共存するために開発者の意図を移管する必要があると考え、git履歴化して確定しつつ、参照特性と機能拡張の両方を満たす方法として手っ取り早いgithub issueを使うことにしました。
 
-![ソースコード](ss01ja.jpg)
-![Issues](ss02ja.jpg)
-![ソースビュー](ss03ja.jpg)
+<img src="ss01ja.jpg" alt="ソースコード" width="597">
+<img src="ss02ja.jpg" alt="Issues" width="486">
+<img src="ss03ja.jpg" alt="ソースビュー" width="570">
 
 ## ✨ 特徴
 
