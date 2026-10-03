@@ -18,9 +18,9 @@ Currently, it extracts marker comments written in Python and semi-automatically 
 > Rather than trying to fight this probabilistic behavior, I decided to acknowledge the AI's domain and find a way to coexist. I realized the developer's "intent" needed to be relocated outside the code. I chose GitHub Issues as the most straightforward approach—it solidifies the intent as a snapshot in Git history while providing excellent traceability and room for future expansion.
 
 
-<img src="asset/ss01en.jpg" alt="Source Code" width="597">
-<img src="asset/ss02en.jpg" alt="Issues" width="576">
-<img src="asset/ss03en.jpg" alt="Source View" width="570">
+<img src="asset/ss01en.jpg" alt="Source Code" width="606">
+<img src="asset/ss02en.jpg" alt="Issues" width="590">
+<img src="asset/ss03en.jpg" alt="Source View" width="564">
 
 ## ✨ Features
 
@@ -162,6 +162,36 @@ This workflow guarantees a permanent snapshot of your design intent as a GitHub 
 ## ⚙️ Limitations
 
 * Currently, the extraction target is strictly limited to files with the `.py` extension.
+
+
+### 🤺 For Jujutsu (jj) Users: Fluid History and the "Wax Seal" Protocol
+
+`gip` generates permalinks on the premise that a specific Git commit hash is "immutable." Therefore, its architecture fundamentally clashes with **Jujutsu (jj)**, a tool that fluidly rewrites history and regenerates hashes as effortlessly as breathing.
+
+However, when `gip` detects it is running in a `jj` environment, it automatically stamps Jujutsu's immutable identifier, the **Change ID**, into the footer of the Issue alongside the GitHub permalink. (e.g., `💎 jj Change ID: qzvqwsxv...`)
+
+To prevent GitHub permalinks from breaking (404) in a `jj` environment and to ensure `gip` functions correctly as an "Intent Sidecar," we recommend the following workflow.
+
+#### 📜 The Wax Seal Protocol
+For Jujutsu users, executing `gip` is akin to the ritual of dropping a wax seal on a letter.
+
+1. **Shape the History:** Use the powerful features of `jj` to freely rewrite, rebase, and perfectly sculpt your Change.
+2. **Attach the Intent:** At the very last moment, when you decide "Okay, this is done," insert your marker comments in your editor.
+3. **Seal it (gip):** Execute `gip`. The Git hash of that exact moment, along with the Change ID, is permanently stamped into the Issue.
+4. **Dispatch Immediately:** Before the wax dries (i.e., before you make any other modifications that would vaporize the hash), immediately run `jj git push` to cast that hash into the remote `.git` database.
+
+#### 🩹 Recovering a Broken Seal (Manual Patching)
+
+If you accidentally modify your code locally right after sealing it with `gip`, the underlying Git hash will be regenerated. Consequently, the GitHub permalink will become a 404 Not Found.
+
+But don't worry—the `Change ID` left in the Issue acts as your ultimate fail-safe. If you want to restore the link, you can easily patch it manually:
+
+1. Finish your final modifications and run `jj git push` to reflect the changes remotely.
+2. Use `jj log` locally to retrieve the **newly finalized Git commit hash**.
+3. "Edit" the Issue on GitHub and manually replace the old hash in the URL with the new one.
+
+Because GitHub Issues are just editable text data, this simple manual recovery method allows `gip` to remain a pure, stateless "fire-and-forget" CLI tool without needing complex background state management.
+
 
 ## License
 

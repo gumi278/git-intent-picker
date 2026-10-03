@@ -61,6 +61,29 @@ def get_github_repo_url(target_repo_url: str) -> str:
     """ghコマンドを使用してGitHubのリポジトリベースURLを取得する"""
     return run_cmd(["gh", "repo", "view", target_repo_url, "--json", "url", "-q", ".url"])
 
+def get_jj_change_id() -> str:
+    """
+    Jujutsu (jj) 環境下であるかを判定し、現在の Change ID を取得する。
+    jj がインストールされていない、または jj リポジトリではない場合は空文字を返す。
+    """
+    try:
+        # jj log を実行して現在の Change ID (@) を取得
+        result = subprocess.run(
+            ["jj", "log", "--no-pager", "-T", "change_id", "-r", "@"],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        
+        # コマンドが成功し、出力があればそれを返す
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except Exception:
+        # jjコマンドが存在しない(FileNotFoundError)などの場合は無視
+        pass
+    
+    return ""
+
 def extract_intent_blocks(filepath: str, author: str) -> list[dict]:
     with open(filepath, 'r', encoding='utf-8') as f:
         lines = f.readlines()
@@ -113,7 +136,7 @@ def generate_issue_title(block_content: list[str], author: str, filepath: str) -
 def main():
     parser = argparse.ArgumentParser(
         prog="gip",
-        description="マーカーコメント処理プロセッサ",
+        description="git intent picker",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 環境変数:
@@ -182,6 +205,7 @@ def main():
     issue_target_remote_url = get_git_remote_url(issue_remote_name)
     
     current_branch = get_current_branch()
+    jj_change_id = get_jj_change_id()
     created_issue_urls = []
 
     for i, data in enumerate(extracted_blocks_flat, 1):
@@ -208,8 +232,12 @@ def main():
         issue_body_lines.append("")
         
         # 追加: ブランチ名の挿入
-        issue_body_lines.append(f"🌿 `{current_branch}`")
+        issue_body_lines.append(f"🌿 **Branch:** `{current_branch}`")
         
+        # 追加: jj環境の場合のみ Change ID を挿入
+        if jj_change_id:
+            issue_body_lines.append(f"💎 **jj Change ID:** `{jj_change_id}`")
+            
         # リンクのテキストからも行番号指定を外す
         issue_body_lines.append(f"🔗 [{filepath}]({file_permalink})")
         
