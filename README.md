@@ -8,8 +8,9 @@ In modern AI-driven development (e.g., using AI agents for automated coding), th
 
 Currently, it extracts marker comments written in Python and semi-automatically converts them into GitHub Issues.
 
-![Source Code](ss01en.png)
-![Issues](ss02en.png)
+![Source Code](ss01en.jpg)
+![Issues](ss02en.jpg)
+![Source View](ss03en.jpg)
 
 ## ✨ Features
 
