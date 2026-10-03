@@ -208,7 +208,7 @@ def main():
         issue_body_lines.append("")
         
         # 追加: ブランチ名の挿入
-        issue_body_lines.append(f"🌿 **Branch:** `{current_branch}`")
+        issue_body_lines.append(f"🌿 `{current_branch}`")
         
         # リンクのテキストからも行番号指定を外す
         issue_body_lines.append(f"🔗 [{filepath}]({file_permalink})")
