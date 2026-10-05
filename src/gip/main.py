@@ -294,6 +294,7 @@ def main():
   GIP_REMOTE_TYPE     github または gitea (デフォルト: github)
   GIP_REMOTE_TOKEN    APIアクセス用のトークン
   GIP_REMOTE_URL      APIのベースURL (giteaの場合は必須)
+  GIP_LABEL           Issueに付与するラベル名 (未指定時はラベルなし)
 """
     )
     parser.add_argument("--author", type=str, help="対象名 (例: myname)。省略時は git config user.name を使用します。")
@@ -371,6 +372,9 @@ def main():
     jj_change_id = get_jj_change_id()
     created_issue_urls = []
 
+    target_label = os.environ.get("GIP_LABEL")
+    labels_to_apply = [target_label] if target_label else []
+
     for i, data in enumerate(extracted_blocks_flat, 1):
         filepath = data["filepath"]
         block = data["block"]
@@ -398,7 +402,7 @@ def main():
         issue_body = "\n".join(issue_body_lines)
         
         print(f"🚀 [{i}/{total_blocks}] Issueを起票中: {issue_title}")
-        issue_url = publisher.create_issue(issue_title, issue_body, ["gip"])
+        issue_url = publisher.create_issue(issue_title, issue_body, labels_to_apply)
         created_issue_urls.append(issue_url)
 
     print(f"\n✅ 完了しました！作成されたIssue:")
