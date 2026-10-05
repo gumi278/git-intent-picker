@@ -4,10 +4,14 @@ import subprocess
 import os
 import sys
 import re
+import json
+import urllib.request
+import urllib.error
+from urllib.parse import urlparse
 
-def run_cmd(cmd: list[str], check: bool = True) -> str:
+def run_cmd(cmd: list[str], check: bool = True, env: dict = None) -> str:
     """シェルコマンドを実行し、標準出力を返す"""
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
     if check and result.returncode != 0:
         print(f"❌ エラー発生: {' '.join(cmd)}")
         print(result.stderr)
@@ -45,7 +49,6 @@ def get_changed_line_numbers_from_diff(filepath: str) -> set[int]:
 
 def get_git_user_name() -> str:
     """Gitのグローバルまたはローカル設定から user.name を取得する"""
-    # check=False にして、設定がない場合でもプログラムが落ちないようにする
     result = subprocess.run(["git", "config", "user.name"], capture_output=True, text=True)
     return result.stdout.strip()
 
@@ -53,7 +56,7 @@ def get_git_remote_url(remote_name: str) -> str:
     """指定されたリモート名からURLを取得する"""
     result = subprocess.run(["git", "remote", "get-url", remote_name], capture_output=True, text=True)
     if result.returncode != 0:
-        print(f"指定されたリモート '{remote_name}' は存在しません。環境変数 GIP_ISSUE_REMOTE の設定を確認してください。")
+        print(f"指定されたリモート '{remote_name}' は存在しません。")
         sys.exit(1)
     return result.stdout.strip()
 
@@ -67,21 +70,16 @@ def get_jj_change_id() -> str:
     jj がインストールされていない、または jj リポジトリではない場合は空文字を返す。
     """
     try:
-        # jj log を実行して現在の Change ID (@) を取得
         result = subprocess.run(
             ["jj", "log", "--no-pager", "-T", "change_id", "-r", "@"],
             capture_output=True,
             text=True,
             check=False
         )
-        
-        # コマンドが成功し、出力があればそれを返す
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
     except Exception:
-        # jjコマンドが存在しない(FileNotFoundError)などの場合は無視
         pass
-    
     return ""
 
 def extract_intent_blocks(filepath: str, author: str) -> list[dict]:
@@ -133,6 +131,135 @@ def generate_issue_title(block_content: list[str], author: str, filepath: str) -
         return title[:47] + "..."
     return title
 
+def parse_owner_repo(remote_url: str) -> tuple[str, str]:
+    if remote_url.endswith(".git"):
+        remote_url = remote_url[:-4]
+    if "://" in remote_url:
+        parsed = urlparse(remote_url)
+        path = parsed.path.strip("/")
+        parts = path.split("/")
+        if len(parts) >= 2:
+            return parts[-2], parts[-1]
+    if ":" in remote_url:
+        path = remote_url.split(":", 1)[1]
+        path = path.strip("/")
+        parts = path.split("/")
+        if len(parts) >= 2:
+            return parts[-2], parts[-1]
+    raise ValueError(f"URLから owner/repo を抽出できませんでした: {remote_url}")
+
+class BasePublisher:
+    def create_issue(self, title: str, body: str, labels: list[str]) -> str:
+        raise NotImplementedError()
+
+class GithubPublisher(BasePublisher):
+    def __init__(self, token: str | None, base_url: str | None, target_remote_url: str):
+        self.token = token
+        self.base_url = base_url
+        self.target_remote_url = target_remote_url
+
+    def create_issue(self, title: str, body: str, labels: list[str]) -> str:
+        if self.token:
+            owner, repo = parse_owner_repo(self.target_remote_url)
+            api_base = "https://api.github.com"
+            if self.base_url:
+                if "api.github.com" not in self.base_url and not self.base_url.endswith("/api/v3"):
+                    api_base = f"{self.base_url.rstrip('/')}/api/v3"
+                else:
+                    api_base = self.base_url.rstrip('/')
+            
+            url = f"{api_base}/repos/{owner}/{repo}/issues"
+            payload = {"title": title, "body": body, "labels": labels}
+            data = json.dumps(payload).encode("utf-8")
+            
+            req = urllib.request.Request(url, data=data, method="POST")
+            req.add_header("Authorization", f"Bearer {self.token}")
+            req.add_header("Accept", "application/vnd.github+json")
+            req.add_header("Content-Type", "application/json")
+            req.add_header("X-GitHub-Api-Version", "2022-11-28")
+            
+            try:
+                with urllib.request.urlopen(req) as response:
+                    res_data = json.loads(response.read().decode("utf-8"))
+                    return res_data.get("html_url", "")
+            except urllib.error.HTTPError as e:
+                err_body = e.read().decode('utf-8')
+                print(f"❌ GitHub API Error ({e.code}): {err_body}")
+                sys.exit(1)
+            except Exception as e:
+                print(f"❌ GitHub Error: {e}")
+                sys.exit(1)
+        else:
+            cmd = [
+                "gh", "issue", "create",
+                "--repo", self.target_remote_url,
+                "--title", title,
+                "--body", body
+            ]
+            for label in labels:
+                cmd.extend(["--label", label])
+                
+            env = os.environ.copy()
+            if self.base_url:
+                env["GH_HOST"] = urlparse(self.base_url).netloc
+
+            result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+            if result.returncode != 0:
+                print(f"❌ エラー発生: {' '.join(cmd)}")
+                print(result.stderr)
+                sys.exit(1)
+            return result.stdout.strip()
+
+class GiteaPublisher(BasePublisher):
+    def __init__(self, token: str, base_url: str, target_remote_url: str):
+        self.token = token
+        self.base_url = base_url
+        self.target_remote_url = target_remote_url
+
+    def create_issue(self, title: str, body: str, labels: list[str]) -> str:
+        owner, repo = parse_owner_repo(self.target_remote_url)
+        url = f"{self.base_url.rstrip('/')}/repos/{owner}/{repo}/issues"
+        
+        payload = {
+            "title": title,
+            "body": body
+        }
+        
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=data, method="POST")
+        req.add_header("Authorization", f"token {self.token}")
+        req.add_header("Content-Type", "application/json")
+        req.add_header("Accept", "application/json")
+        
+        try:
+            with urllib.request.urlopen(req) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                return res_data.get("html_url", "")
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode('utf-8')
+            print(f"❌ Gitea API Error ({e.code}): {err_body}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"❌ Gitea Error: {e}")
+            sys.exit(1)
+
+def get_publisher(target_remote_url: str) -> BasePublisher:
+    remote_type = os.environ.get("GIP_REMOTE_TYPE", "github").lower()
+    token = os.environ.get("GIP_REMOTE_TOKEN")
+    base_url = os.environ.get("GIP_REMOTE_URL")
+
+    if remote_type == "gitea":
+        if not base_url:
+            print("❌ エラー: GIP_REMOTE_TYPE=gitea の場合、GIP_REMOTE_URL は必須です。")
+            sys.exit(1)
+        if not token:
+            print("❌ エラー: GIP_REMOTE_TYPE=gitea の場合、GIP_REMOTE_TOKEN は必須です。")
+            sys.exit(1)
+        return GiteaPublisher(token=token, base_url=base_url, target_remote_url=target_remote_url)
+    
+    else:
+        return GithubPublisher(token=token, base_url=base_url, target_remote_url=target_remote_url)
+
 def main():
     parser = argparse.ArgumentParser(
         prog="gip",
@@ -140,14 +267,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 環境変数:
-  GIP_ISSUE_REMOTE    Issueの起票先リモート名 (デフォルト: origin)
-                      例: export GIP_ISSUE_REMOTE=upstream
+  GIP_REMOTE_TYPE     github または gitea (デフォルト: github)
+  GIP_REMOTE_TOKEN    APIアクセス用のトークン
+  GIP_REMOTE_URL      APIのベースURL (giteaの場合は必須)
 """
     )
     parser.add_argument("--author", type=str, help="対象名 (例: myname)。省略時は git config user.name を使用します。")
     args = parser.parse_args()
 
-    # --authorのフォールバックロジック
     author_name = args.author
     if not author_name:
         author_name = get_git_user_name()
@@ -191,18 +318,30 @@ def main():
     total_blocks = len(extracted_blocks_flat)
     print(f"🔍 {total_blocks}件の意図コメントブロックを抽出しました。\n")
 
-    # 環境変数から起票先リモート名を取得（デフォルト: origin）
-    issue_remote_name = os.environ.get("GIP_ISSUE_REMOTE") or "origin"
-
-    # GitHubパーマリンク生成のための情報を取得
+    origin_remote_url = get_git_remote_url("origin")
     commit_hash = get_current_commit_hash()
     
-    # 1. パーマリンク用URL（コードの実体がある場所 = 常に origin）
-    origin_remote_url = get_git_remote_url("origin")
-    permalink_repo_url = get_github_repo_url(origin_remote_url)
+    remote_type = os.environ.get("GIP_REMOTE_TYPE", "github").lower()
+    base_url = os.environ.get("GIP_REMOTE_URL")
     
-    # 2. Issue起票先URL（環境変数で指定されたリモート）
-    issue_target_remote_url = get_git_remote_url(issue_remote_name)
+    if remote_type == "gitea":
+        owner, repo = parse_owner_repo(origin_remote_url)
+        if not base_url:
+            print("❌ エラー: GIP_REMOTE_TYPE=gitea の場合、GIP_REMOTE_URL は必須です。")
+            sys.exit(1)
+        parsed = urlparse(base_url)
+        web_base = f"{parsed.scheme}://{parsed.netloc}"
+        permalink_repo_url = f"{web_base}/{owner}/{repo}"
+    else:
+        if base_url:
+            owner, repo = parse_owner_repo(origin_remote_url)
+            parsed = urlparse(base_url)
+            web_base = f"{parsed.scheme}://{parsed.netloc}"
+            permalink_repo_url = f"{web_base}/{owner}/{repo}"
+        else:
+            permalink_repo_url = get_github_repo_url(origin_remote_url)
+
+    publisher = get_publisher(origin_remote_url)
     
     current_branch = get_current_branch()
     jj_change_id = get_jj_change_id()
@@ -219,10 +358,7 @@ def main():
         line_anchor = f"#L{start_line}" if start_line == end_line else f"#L{start_line}-L{end_line}"
         file_permalink = f"{permalink_repo_url}/blob/{commit_hash}/{filepath}{line_anchor}"
         
-        # Issue本文の構成
         issue_body_lines = []
-        
-        # 1行目はスキップし、2行目以降のコメント記号とインデントを取り除く
         for line in block['content'][1:]:
             clean_line = line.lstrip(" \t#").lstrip(" \t")
             issue_body_lines.append(clean_line)
@@ -230,31 +366,17 @@ def main():
         issue_body_lines.append("")
         issue_body_lines.append("---")
         issue_body_lines.append("")
-        
-        # 追加: ブランチ名の挿入
         issue_body_lines.append(f"🌿 **Branch:** `{current_branch}`")
-        
-        # 追加: jj環境の場合のみ Change ID を挿入
         if jj_change_id:
             issue_body_lines.append(f"💎 **jj Change ID:** `{jj_change_id}`")
-            
-        # リンクのテキストからも行番号指定を外す
         issue_body_lines.append(f"🔗 [{filepath}]({file_permalink})")
         
         issue_body = "\n".join(issue_body_lines)
         
         print(f"🚀 [{i}/{total_blocks}] Issueを起票中: {issue_title}")
-        # --label "gip" を追加してIssueを作成
-        issue_url = run_cmd([
-            "gh", "issue", "create",
-            "--repo", issue_target_remote_url,
-            "--title", issue_title,
-            "--body", issue_body,
-            "--label", "gip"
-        ])
+        issue_url = publisher.create_issue(issue_title, issue_body, ["gip"])
         created_issue_urls.append(issue_url)
 
-    # 破壊的変更（git restore）を排除し、IDEでの手動Rollbackを促すメッセージへ変更
     print(f"\n✅ 完了しました！作成されたIssue:")
     for url in created_issue_urls:
         print(f" - {url}")
