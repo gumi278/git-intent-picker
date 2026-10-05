@@ -216,13 +216,37 @@ class GiteaPublisher(BasePublisher):
         self.base_url = base_url
         self.target_remote_url = target_remote_url
 
+    def _get_label_ids(self, owner: str, repo: str, label_names: list[str]) -> list[int]:
+        if not label_names:
+            return []
+            
+        url = f"{self.base_url.rstrip('/')}/repos/{owner}/{repo}/labels"
+        req = urllib.request.Request(url, method="GET")
+        req.add_header("Authorization", f"token {self.token}")
+        req.add_header("Accept", "application/json")
+        
+        try:
+            with urllib.request.urlopen(req) as response:
+                labels_data = json.loads(response.read().decode("utf-8"))
+                label_ids = [
+                    label.get("id") for label in labels_data 
+                    if label.get("name") in label_names
+                ]
+                return label_ids
+        except Exception as e:
+            print(f"⚠️ Giteaラベル取得エラー: {e}")
+            return []
+
     def create_issue(self, title: str, body: str, labels: list[str]) -> str:
         owner, repo = parse_owner_repo(self.target_remote_url)
+        label_ids = self._get_label_ids(owner, repo, labels)
+        
         url = f"{self.base_url.rstrip('/')}/repos/{owner}/{repo}/issues"
         
         payload = {
             "title": title,
-            "body": body
+            "body": body,
+            "labels": label_ids
         }
         
         data = json.dumps(payload).encode("utf-8")
